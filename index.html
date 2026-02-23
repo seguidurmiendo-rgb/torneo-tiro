@@ -289,8 +289,8 @@
                 <!-- Tabla de puntajes mensuales -->
             </div>
 
-            <button class="btn btn-primary" onclick="cerrarModal('modalDetalle')"
-                style="margin-top: 2rem; width: 100%;">Cerrar</button>
+            <button class="btn btn-outline" onclick="cerrarModal('modalDetalle')"
+                style="margin-top: 2rem; width: 100%;">Volver</button>
         </div>
     </div>
 
@@ -310,8 +310,9 @@
 
             <div id="adminPanel" style="display: none;">
                 <div style="display: flex; gap: 0.5rem; margin-bottom: 2rem;">
-                    <button class="btn btn-outline" id="tabScore" style="flex:1">Cargar Puntaje</button>
-                    <button class="btn btn-outline" id="tabShooter" style="flex:1">Nuevo Tirador</button>
+                    <button class="btn btn-outline" id="tabScore" style="flex:1">Puntaje</button>
+                    <button class="btn btn-outline" id="tabShooter" style="flex:1">Nuevo</button>
+                    <button class="btn btn-outline" id="tabManage" style="flex:1">Gestión</button>
                 </div>
 
                 <form id="scoreForm">
@@ -394,6 +395,14 @@
                     <div class="form-group"><label>Calibre</label><input type="text" id="newCalibre"
                             placeholder="Ej: 9mm"></div>
 
+                    <div class="form-group">
+                        <label>¿Pago Inscripción?</label>
+                        <select id="newPago">
+                            <option value="No">No</option>
+                            <option value="Sí">Sí</option>
+                        </select>
+                    </div>
+
                     <div id="shooterMsg" style="margin: 1rem 0; color: var(--accent); font-weight: bold;"></div>
 
                     <div style="display: flex; gap: 1rem;">
@@ -402,274 +411,465 @@
                         <button type="submit" class="btn btn-primary" style="flex:2">Registrar Tirador</button>
                     </div>
                 </form>
+
+                <!-- Panel de Gestión -->
+                <div id="managePanel" style="display: none;">
+                    <input type="text" id="searchManage" placeholder="Buscar tirador para gestionar..."
+                        style="width: 100%; margin-bottom: 1rem; padding: 0.8rem; background: #2a2a2a; border: 1px solid #444; color: #fff;">
+                    <div id="manageList" class="grid-list" style="max-height: 400px; overflow-y: auto;">
+                        <!-- Dinámico -->
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
+        <!-- Modal Visor de Fotos -->
+        <div id="modalFoto" class="modal">
+            <div class="modal-content" style="max-width: 90%; width: auto;">
+                <h2 id="fotoTitle" style="margin-bottom: 1rem;">Evidencia del Blanco</h2>
+                <div id="fotoContainer" style="text-align: center;">
+                    <img id="imgVisor" src=""
+                        style="max-width: 100%; height: auto; border-radius: 8px; border: 2px solid var(--primary);">
+                </div>
+                <button class="btn btn-primary" onclick="cerrarModal('modalFoto')"
+                    style="margin-top: 1rem; width: 100%;">Cerrar</button>
+            </div>
+        </div>
 
-    <script>
-        // CONFIGURACIÓN: PEGAR AQUÍ EL URL DEL WEB APP DE GOOGLE APPS SCRIPT
-        const API_URL = "https://script.google.com/macros/s/AKfycbxS6T56FXsxUdwHOpYOSGEYS-72wvGxbczEAsk6kag-wXghjtH-jpKN6k2riTfwN07t/exec";
+        <script>
+            // CONFIGURACIÓN: PEGAR AQUÍ EL URL DEL WEB APP DE GOOGLE APPS SCRIPT
+            const API_URL = "https://script.google.com/macros/s/AKfycbxS6T56FXsxUdwHOpYOSGEYS-72wvGxbczEAsk6kag-wXghjtH-jpKN6k2riTfwN07t/exec";
 
-        let allShootData = [];
-        let shootersList = [];
+            let allShootData = [];
+            let shootersList = [];
 
-        async function init() {
-            if (API_URL === "URL_DE_TU_SCRIPT_AQUI") {
-                alert("Por favor, configura la constante API_URL con el enlace de tu Google Apps Script.");
-                return;
+            async function init() {
+                if (API_URL === "URL_DE_TU_SCRIPT_AQUI") {
+                    alert("Por favor, configura la constante API_URL con el enlace de tu Google Apps Script.");
+                    return;
+                }
+                await fetchRankings();
+                await fetchShooters();
             }
-            await fetchRankings();
-            await fetchShooters();
-        }
 
-        async function fetchRankings() {
-            showLoader(true);
-            try {
-                const res = await fetch(`${API_URL}?action=getRankings`, {
-                    mode: 'cors',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' }
-                });
-                allShootData = await res.json();
-                renderRanking();
-            } catch (err) {
-                console.error(err);
-                document.getElementById('rankingGrid').innerHTML = "<p>Error al cargar datos.</p>";
-            } finally {
-                showLoader(false);
+            async function fetchRankings() {
+                showLoader(true);
+                try {
+                    const res = await fetch(`${API_URL}?action=getRankings`, {
+                        mode: 'cors',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+                    });
+                    allShootData = await res.json();
+                    renderRanking();
+                } catch (err) {
+                    console.error(err);
+                    document.getElementById('rankingGrid').innerHTML = "<p>Error al cargar datos.</p>";
+                } finally {
+                    showLoader(false);
+                }
             }
-        }
 
-        async function fetchShooters() {
-            try {
-                const res = await fetch(`${API_URL}?action=getShooters`, {
-                    mode: 'cors',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' }
-                });
-                shootersList = await res.json();
-                const select = document.getElementById('selectTirador');
-                shootersList.forEach(s => {
-                    const opt = document.createElement('option');
-                    opt.value = s.DNI;
-                    opt.textContent = `${s.Nombre} ${s.Apellido} (${s.DNI})`;
-                    select.appendChild(opt);
-                });
-            } catch (err) { console.error(err); }
-        }
+            async function fetchShooters() {
+                try {
+                    const res = await fetch(`${API_URL}?action=getShooters`, {
+                        mode: 'cors',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+                    });
+                    shootersList = await res.json();
+                    const select = document.getElementById('selectTirador');
+                    shootersList.forEach(s => {
+                        const opt = document.createElement('option');
+                        opt.value = s.DNI;
+                        opt.textContent = `${s.Nombre} ${s.Apellido} (${s.DNI})`;
+                        select.appendChild(opt);
+                    });
+                } catch (err) { console.error(err); }
+            }
 
-        function renderRanking() {
-            const grid = document.getElementById('rankingGrid');
-            grid.innerHTML = "";
+            function renderRanking() {
+                const grid = document.getElementById('rankingGrid');
+                grid.innerHTML = "";
 
-            allShootData.forEach((item, index) => {
-                const div = document.createElement('div');
-                div.className = "card";
-                div.onclick = () => verDetalle(item.DNI);
-                div.innerHTML = `
+                allShootData.forEach((item, index) => {
+                    const div = document.createElement('div');
+                    div.className = "card";
+                    div.onclick = () => verDetalle(item.DNI);
+                    div.innerHTML = `
                     <div class="rank-number">${index + 1}</div>
                     <h3>${item.Nombre} ${item.Apellido}</h3>
                     <div class="score-big">${item.totalScore} pts</div>
                     <p style="font-size: 0.8rem; color: #888;">${item.Arma} - ${item.Calibre}</p>
                 `;
-                grid.appendChild(div);
-            });
-        }
-
-        async function verDetalle(dni) {
-            document.getElementById('modalDetalle').style.display = 'flex';
-            const det = await fetch(`${API_URL}?action=getShooterDetails&dni=${dni}`, {
-                mode: 'cors',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' }
-            }).then(r => r.json());
-
-            document.getElementById('detNombre').textContent = `${det.shooter.Nombre} ${det.shooter.Apellido}`;
-            document.getElementById('detDNI').textContent = `DNI: ${det.shooter.DNI} | Socio: ${det.shooter.NumeroSocio || 'No'}`;
-
-            let html = `<table>
-                <tr><th>Mes</th><th>Puntos</th><th>Evidencia</th></tr>`;
-
-            det.scores.forEach(s => {
-                html += `<tr>
-                    <td>${s.Mes}</td>
-                    <td><b>${s.PuntajeTotal}</b></td>
-                    <td><a href="${s.FotoBlanco}" target="_blank" style="color:var(--primary)">Ver Blanco</a></td>
-                </tr>`;
-            });
-            html += `</table>`;
-            document.getElementById('detHistorial').innerHTML = html;
-        }
-
-        // --- ADMIN LOGIC ---
-        document.getElementById('btnAdmin').onclick = () => {
-            document.getElementById('modalAdmin').style.display = 'flex';
-        };
-
-        // Tabs Logic
-        document.getElementById('tabScore').onclick = () => {
-            document.getElementById('scoreForm').style.display = 'block';
-            document.getElementById('shooterForm').style.display = 'none';
-            document.getElementById('tabScore').className = 'btn btn-primary';
-            document.getElementById('tabShooter').className = 'btn btn-outline';
-        };
-        document.getElementById('tabShooter').onclick = () => {
-            document.getElementById('scoreForm').style.display = 'none';
-            document.getElementById('shooterForm').style.display = 'block';
-            document.getElementById('tabScore').className = 'btn btn-outline';
-            document.getElementById('tabShooter').className = 'btn btn-primary';
-        };
-
-        document.getElementById('btnVerifyAuth').onclick = () => {
-            const pass = document.getElementById('adminPass').value;
-            // Verificación local simple (la real ocurre en el servidor)
-            if (pass === "SITAS2026") {
-                document.getElementById('adminAuth').style.display = 'none';
-                document.getElementById('adminPanel').style.display = 'block';
-                document.getElementById('adminTitle').textContent = "Panel de Control";
-                document.getElementById('adminSub').textContent = "Gestión de Torneo";
-                document.getElementById('tabScore').click(); // Ir a carga por defecto
-            } else {
-                alert("Contraseña Incorrecta");
-            }
-        };
-
-        // Registrar Nuevo Tirador
-        document.getElementById('shooterForm').onsubmit = async (e) => {
-            e.preventDefault();
-            const msg = document.getElementById('shooterMsg');
-            msg.textContent = "Registrando...";
-            msg.style.color = "var(--primary)";
-
-            const shooterData = {
-                dni: document.getElementById('newDni').value,
-                nombre: document.getElementById('newNombre').value,
-                apellido: document.getElementById('newApellido').value,
-                socionumero: document.getElementById('newSocio').value,
-                email: document.getElementById('newEmail').value,
-                arma: document.getElementById('newArma').value,
-                calibre: document.getElementById('newCalibre').value,
-                pago: false
-            };
-
-            const payload = {
-                password: document.getElementById('adminPass').value,
-                action: "saveShooter",
-                shooter: shooterData
-            };
-
-            try {
-                const res = await fetch(API_URL, {
-                    method: 'POST',
-                    body: JSON.stringify(payload),
-                    mode: 'cors', // Asegurar CORS
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' } // Necesario para evitar preflight en GAS
-                });
-                const result = await res.json();
-                if (result.success) {
-                    alert("Tirador registrado con éxito.");
-                    document.getElementById('shooterForm').reset();
-                    await fetchShooters();
-                    document.getElementById('tabScore').click();
-                } else {
-                    msg.textContent = "Error del Servidor: " + result.error;
-                    msg.style.color = "var(--accent)";
-                }
-            } catch (err) {
-                console.error("Detalle del error:", err);
-                msg.textContent = "Error de conexión. Revisa la consola (F12).";
-                msg.style.color = "var(--accent)";
-            }
-        };
-
-        // Cargar Puntaje
-        document.getElementById('scoreForm').onsubmit = async (e) => {
-            e.preventDefault();
-            const msg = document.getElementById('formMsg');
-            msg.textContent = "Procesando foto y puntaje...";
-            msg.style.color = "var(--primary)";
-
-            // Leer archivo si existe
-            const fileInput = document.getElementById('fotoFile');
-            let base64 = null;
-            if (fileInput.files && fileInput.files[0]) {
-                const reader = new FileReader();
-                base64 = await new Promise((resolve) => {
-                    reader.onload = (ev) => resolve(ev.target.result);
-                    reader.readAsDataURL(fileInput.files[0]);
+                    grid.appendChild(div);
                 });
             }
 
-            const scoreData = {
-                dni: document.getElementById('selectTirador').value,
-                mes: document.getElementById('selectMes').value,
-                z10: parseInt(document.getElementById('z10').value) || 0,
-                z9: parseInt(document.getElementById('z9').value) || 0,
-                z8: parseInt(document.getElementById('z8').value) || 0,
-                z7: parseInt(document.getElementById('z7').value) || 0,
-                z6: parseInt(document.getElementById('z6').value) || 0,
-                z5: parseInt(document.getElementById('z5').value) || 0,
-                z4: parseInt(document.getElementById('z4').value) || 0,
-                z3: parseInt(document.getElementById('z3').value) || 0,
-                z2: parseInt(document.getElementById('z2').value) || 0,
-                z1: parseInt(document.getElementById('z1').value) || 0,
-                z0: parseInt(document.getElementById('z0').value) || 0,
-                fotoBase64: base64
-            };
-
-            const payload = {
-                password: document.getElementById('adminPass').value,
-                action: "saveScore",
-                score: scoreData
-            };
-
-            try {
-                const res = await fetch(API_URL, {
-                    method: 'POST',
-                    body: JSON.stringify(payload),
+            async function verDetalle(dni) {
+                document.getElementById('modalDetalle').style.display = 'flex';
+                const det = await fetch(`${API_URL}?action=getShooterDetails&dni=${dni}`, {
                     mode: 'cors',
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' }
-                });
-                const result = await res.json();
+                }).then(r => r.json());
 
-                if (result.success) {
-                    alert("¡Puntaje guardado con éxito! Total: " + result.totalPoints);
-                    cerrarModal('modalAdmin');
-                    fetchRankings();
+                document.getElementById('detNombre').textContent = `${det.shooter.Nombre} ${det.shooter.Apellido}`;
+                document.getElementById('detDNI').textContent = `DNI: ${det.shooter.DNI} | Socio: ${det.shooter.NumeroSocio || 'No'}`;
+
+                let html = `<table style="width:100%; border-collapse:collapse; margin-top:1rem;">
+                <tr style="border-bottom:1px solid #444;"><th>Mes</th><th>Puntos</th><th>Acción</th></tr>`;
+
+                det.scores.forEach(s => {
+                    html += `<tr style="border-bottom:1px solid #333;">
+                    <td style="padding:0.5rem;">${s.Mes}</td>
+                    <td style="padding:0.5rem; color:var(--primary); font-weight:bold;">${s.PuntajeTotal}</td>
+                    <td style="padding:0.5rem;">
+                        <button class="btn btn-outline" style="padding:0.3rem 0.6rem; font-size:0.7rem;" onclick="abrirVisor('${s.FotoBlanco}', '${s.Mes}')">Ver Blanco</button>
+                    </td>
+                </tr>`;
+                });
+                html += `</table>`;
+                document.getElementById('detHistorial').innerHTML = html;
+            }
+
+            function abrirVisor(url, mes) {
+                if (!url || url.includes("Error")) {
+                    alert("No hay foto disponible para esta entrada.");
+                    return;
+                }
+                document.getElementById('imgVisor').src = url;
+                document.getElementById('fotoTitle').textContent = `Blanco - ${mes}`;
+                document.getElementById('modalFoto').style.display = 'flex';
+            }
+
+            // --- ADMIN LOGIC ---
+            document.getElementById('btnAdmin').onclick = () => {
+                document.getElementById('modalAdmin').style.display = 'flex';
+            };
+
+            // Tabs Logic
+            document.getElementById('tabScore').onclick = () => {
+                showTab('scoreForm');
+                document.getElementById('tabScore').className = 'btn btn-primary';
+                document.getElementById('tabShooter').className = 'btn btn-outline';
+                document.getElementById('tabManage').className = 'btn btn-outline';
+            };
+            document.getElementById('tabShooter').onclick = () => {
+                showTab('shooterForm');
+                document.getElementById('tabScore').className = 'btn btn-outline';
+                document.getElementById('tabShooter').className = 'btn btn-primary';
+                document.getElementById('tabManage').className = 'btn btn-outline';
+            };
+            document.getElementById('tabManage').onclick = () => {
+                showTab('managePanel');
+                document.getElementById('tabScore').className = 'btn btn-outline';
+                document.getElementById('tabShooter').className = 'btn btn-outline';
+                document.getElementById('tabManage').className = 'btn btn-primary';
+                renderManageList();
+            };
+
+            function showTab(panelId) {
+                document.getElementById('scoreForm').style.display = 'none';
+                document.getElementById('shooterForm').style.display = 'none';
+                document.getElementById('managePanel').style.display = 'none';
+                document.getElementById(panelId).style.display = 'block';
+            }
+
+            document.getElementById('btnVerifyAuth').onclick = () => {
+                const pass = document.getElementById('adminPass').value;
+                // Verificación local simple (la real ocurre en el servidor)
+                if (pass === "SITAS2026") {
+                    document.getElementById('adminAuth').style.display = 'none';
+                    document.getElementById('adminPanel').style.display = 'block';
+                    document.getElementById('adminTitle').textContent = "Panel de Control";
+                    document.getElementById('adminSub').textContent = "Gestión de Torneo";
+                    document.getElementById('tabScore').click(); // Ir a carga por defecto
                 } else {
-                    msg.textContent = "Error del Servidor: " + result.error;
+                    alert("Contraseña Incorrecta");
+                }
+            };
+
+            // Registrar Nuevo Tirador
+            document.getElementById('shooterForm').onsubmit = async (e) => {
+                e.preventDefault();
+                const msg = document.getElementById('shooterMsg');
+                msg.textContent = "Registrando...";
+                msg.style.color = "var(--primary)";
+
+                const shooterData = {
+                    dni: document.getElementById('newDni').value,
+                    nombre: document.getElementById('newNombre').value,
+                    apellido: document.getElementById('newApellido').value,
+                    socionumero: document.getElementById('newSocio').value,
+                    email: document.getElementById('newEmail').value,
+                    arma: document.getElementById('newArma').value,
+                    calibre: document.getElementById('newCalibre').value,
+                    pago: document.getElementById('newPago').value
+                };
+
+                const payload = {
+                    password: document.getElementById('adminPass').value,
+                    action: editMode.action,
+                    shooter: shooterData
+                };
+
+                try {
+                    const res = await fetch(API_URL, {
+                        method: 'POST',
+                        body: JSON.stringify(payload),
+                        mode: 'cors', // Asegurar CORS
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' } // Necesario para evitar preflight en GAS
+                    });
+                    const result = await res.json();
+                    if (result.success) {
+                        alert("Tirador registrado/actualizado con éxito.");
+                        document.getElementById('shooterForm').reset();
+                        document.getElementById('newDni').readOnly = false;
+                        editMode = { action: 'saveShooter', dni: null };
+                        document.querySelector('#shooterForm button[type="submit"]').textContent = "Registrar Tirador";
+                        await fetchShooters();
+                        document.getElementById('tabManage').click();
+                    } else {
+                        msg.textContent = "Error del Servidor: " + result.error;
+                        msg.style.color = "var(--accent)";
+                    }
+                } catch (err) {
+                    console.error("Detalle del error:", err);
+                    msg.textContent = "Error de conexión. Revisa la consola (F12).";
                     msg.style.color = "var(--accent)";
                 }
-            } catch (err) {
-                console.error("Detalle del error:", err);
-                msg.textContent = "Error de conexión. Revisa la consola (F12).";
-                msg.style.color = "var(--accent)";
+            };
+
+            // Cargar Puntaje
+            document.getElementById('scoreForm').onsubmit = async (e) => {
+                e.preventDefault();
+                const msg = document.getElementById('formMsg');
+                msg.textContent = "Procesando foto y puntaje...";
+                msg.style.color = "var(--primary)";
+
+                // Leer archivo si existe
+                const fileInput = document.getElementById('fotoFile');
+                let base64 = null;
+                if (fileInput.files && fileInput.files[0]) {
+                    const reader = new FileReader();
+                    base64 = await new Promise((resolve) => {
+                        reader.onload = (ev) => resolve(ev.target.result);
+                        reader.readAsDataURL(fileInput.files[0]);
+                    });
+                }
+
+                const scoreData = {
+                    dni: document.getElementById('selectTirador').value,
+                    mes: document.getElementById('selectMes').value,
+                    z10: parseInt(document.getElementById('z10').value) || 0,
+                    z9: parseInt(document.getElementById('z9').value) || 0,
+                    z8: parseInt(document.getElementById('z8').value) || 0,
+                    z7: parseInt(document.getElementById('z7').value) || 0,
+                    z6: parseInt(document.getElementById('z6').value) || 0,
+                    z5: parseInt(document.getElementById('z5').value) || 0,
+                    z4: parseInt(document.getElementById('z4').value) || 0,
+                    z3: parseInt(document.getElementById('z3').value) || 0,
+                    z2: parseInt(document.getElementById('z2').value) || 0,
+                    z1: parseInt(document.getElementById('z1').value) || 0,
+                    z0: parseInt(document.getElementById('z0').value) || 0,
+                    fotoBase64: base64
+                };
+
+                const payload = {
+                    password: document.getElementById('adminPass').value,
+                    action: scoreEditMode.action,
+                    score: scoreData
+                };
+
+                try {
+                    const res = await fetch(API_URL, {
+                        method: 'POST',
+                        body: JSON.stringify(payload),
+                        mode: 'cors',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+                    });
+                    const result = await res.json();
+
+                    if (result.success) {
+                        alert("¡Puntaje guardado/actualizado con éxito!");
+                        document.getElementById('scoreForm').reset();
+                        document.getElementById('fotoFile').required = true;
+                        scoreEditMode = { action: 'saveScore', dni: null, mes: null };
+                        document.querySelector('#scoreForm button[type="submit"]').textContent = "Guardar Puntaje";
+                        await fetchRankings();
+                        document.getElementById('tabManage').click();
+                    } else {
+                        msg.textContent = "Error del Servidor: " + result.error;
+                        msg.style.color = "var(--accent)";
+                    }
+                } catch (err) {
+                    console.error("Detalle del error:", err);
+                    msg.textContent = "Error de conexión. Revisa la consola (F12).";
+                    msg.style.color = "var(--accent)";
+                }
+            };
+
+            function cerrarModal(id) {
+                document.getElementById(id).style.display = 'none';
+                if (id === 'modalAdmin') {
+                    document.getElementById('adminAuth').style.display = 'block';
+                    document.getElementById('adminPanel').style.display = 'none';
+                    document.getElementById('adminTitle').textContent = "Acceso Comisario";
+                    document.getElementById('adminSub').textContent = "Seguridad del Sistema";
+                    document.getElementById('scoreForm').reset();
+                    document.getElementById('shooterForm').reset();
+                    document.getElementById('formMsg').textContent = "";
+                    document.getElementById('shooterMsg').textContent = "";
+                }
             }
-        };
 
-        function cerrarModal(id) {
-            document.getElementById(id).style.display = 'none';
-            if (id === 'modalAdmin') {
-                document.getElementById('adminAuth').style.display = 'block';
-                document.getElementById('adminPanel').style.display = 'none';
-                document.getElementById('adminTitle').textContent = "Acceso Comisario";
-                document.getElementById('adminSub').textContent = "Seguridad del Sistema";
-                document.getElementById('scoreForm').reset();
-                document.getElementById('shooterForm').reset();
-                document.getElementById('formMsg').textContent = "";
-                document.getElementById('shooterMsg').textContent = "";
+            function showLoader(show) {
+                document.getElementById('loader').style.display = show ? 'block' : 'none';
             }
-        }
 
-        function showLoader(show) {
-            document.getElementById('loader').style.display = show ? 'block' : 'none';
-        }
-
-        window.onclick = (event) => {
-            if (event.target.className === 'modal') {
-                cerrarModal(event.target.id);
+            window.onclick = (event) => {
+                if (event.target.className === 'modal') {
+                    cerrarModal(event.target.id);
+                }
             }
-        }
 
-        init();
-    </script>
+            init();
+            function renderManageList() {
+                const list = document.getElementById('manageList');
+                const search = document.getElementById('searchManage').value.toLowerCase();
+                list.innerHTML = "";
+
+                const filtered = shootersList.filter(s =>
+                    s.Nombre.toLowerCase().includes(search) ||
+                    s.Apellido.toLowerCase().includes(search) ||
+                    s.DNI.toString().includes(search)
+                );
+
+                filtered.forEach(s => {
+                    const div = document.createElement('div');
+                    div.className = "card";
+                    div.style.padding = "1rem";
+                    div.style.marginBottom = "0.5rem";
+                    div.innerHTML = `
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <div>
+                                <strong>${s.Nombre} ${s.Apellido}</strong><br>
+                                <small>DNI: ${s.DNI} | Pago: ${s.Pago}</small>
+                            </div>
+                            <div style="display:flex; gap:0.5rem;">
+                                <button class="btn btn-outline" style="padding:0.4rem;" onclick="prepararEdicionTirador('${s.DNI}')">✏️</button>
+                                <button class="btn btn-primary" style="padding:0.4rem;" onclick="verGestionPuntajes('${s.DNI}')">🎯</button>
+                            </div>
+                        </div>
+                    `;
+                    list.appendChild(div);
+                });
+            }
+
+            document.getElementById('searchManage').oninput = renderManageList;
+
+            let editMode = { action: 'saveShooter', dni: null };
+
+            function prepararEdicionTirador(dni) {
+                const s = shootersList.find(x => x.DNI.toString() === dni.toString());
+                if (!s) return;
+
+                document.getElementById('newDni').value = s.DNI;
+                document.getElementById('newDni').readOnly = true;
+                document.getElementById('newNombre').value = s.Nombre;
+                document.getElementById('newApellido').value = s.Apellido;
+                document.getElementById('newSocio').value = s.NumeroSocio || "";
+                document.getElementById('newEmail').value = s.Email || "";
+                document.getElementById('newArma').value = s.Arma || "";
+                document.getElementById('newCalibre').value = s.Calibre || "";
+                document.getElementById('newPago').value = s.Pago || "No";
+
+                editMode = { action: 'updateShooter', dni: dni };
+                showTab('shooterForm');
+                document.getElementById('tabShooter').click();
+                document.querySelector('#shooterForm button[type="submit"]').textContent = "Actualizar Tirador";
+            }
+
+            // Resetear modo al abrir nuevo
+            document.getElementById('tabShooter').addEventListener('click', () => {
+                if (editMode.action === 'updateShooter') {
+                    document.getElementById('shooterForm').reset();
+                    document.getElementById('newDni').readOnly = false;
+                    document.querySelector('#shooterForm button[type="submit"]').textContent = "Registrar Tirador";
+                    editMode = { action: 'saveShooter', dni: null };
+                }
+            });
+
+            async function verGestionPuntajes(dni) {
+                const det = await fetch(`${API_URL}?action=getShooterDetails&dni=${dni}`, {
+                    mode: 'cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+                }).then(r => r.json());
+
+                const list = document.getElementById('manageList');
+                list.innerHTML = `<button class="btn btn-outline" style="margin-bottom:1rem;" onclick="renderManageList()">⬅️ Volver</button>
+                                  <h3>Puntajes de ${det.shooter.Nombre}</h3>`;
+
+                if (det.scores.length === 0) {
+                    list.innerHTML += "<p>No hay puntajes registrados.</p>";
+                    return;
+                }
+
+                det.scores.forEach(s => {
+                    const div = document.createElement('div');
+                    div.className = "card";
+                    div.style.padding = "1rem";
+                    div.style.marginBottom = "0.5rem";
+                    div.innerHTML = `
+                         <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <div>
+                                <strong>${s.Mes}</strong>: ${s.PuntajeTotal} pts
+                            </div>
+                            <button class="btn btn-outline" onclick="prepararEdicionPuntaje('${dni}', '${s.Mes}')">Editar</button>
+                        </div>
+                    `;
+                    list.appendChild(div);
+                });
+            }
+
+            async function prepararEdicionPuntaje(dni, mes) {
+                const det = await fetch(`${API_URL}?action=getShooterDetails&dni=${dni}`, {
+                    mode: 'cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+                }).then(r => r.json());
+
+                const score = det.scores.find(s => s.Mes === mes);
+                if (!score) return;
+
+                document.getElementById('selectTirador').value = dni;
+                document.getElementById('selectMes').value = mes;
+                document.getElementById('z10').value = score.Z10;
+                document.getElementById('z9').value = score.Z9;
+                document.getElementById('z8').value = score.Z8;
+                document.getElementById('z7').value = score.Z7;
+                document.getElementById('z6').value = score.Z6;
+                document.getElementById('z5').value = score.Z5;
+                document.getElementById('z4').value = score.Z4;
+                document.getElementById('z3').value = score.Z3;
+                document.getElementById('z2').value = score.Z2;
+                document.getElementById('z1').value = score.Z1;
+                document.getElementById('z0').value = score.Z0;
+                document.getElementById('fotoFile').required = false; // No obligatorio en edición
+
+                scoreEditMode = { action: 'updateScore', dni: dni, mes: mes };
+                showTab('scoreForm');
+                document.getElementById('tabScore').click();
+                document.querySelector('#scoreForm button[type="submit"]').textContent = "Actualizar Puntaje";
+            }
+
+            let scoreEditMode = { action: 'saveScore', dni: null, mes: null };
+
+            document.getElementById('tabScore').addEventListener('click', () => {
+                if (scoreEditMode.action === 'updateScore') {
+                    document.getElementById('scoreForm').reset();
+                    document.getElementById('fotoFile').required = true;
+                    document.querySelector('#scoreForm button[type="submit"]').textContent = "Guardar Puntaje";
+                    scoreEditMode = { action: 'saveScore', dni: null, mes: null };
+                }
+            });
+        </script>
 </body>
 
 </html>
