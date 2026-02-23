@@ -556,6 +556,7 @@
 
                 // Reset state
                 visor.style.display = 'none';
+                visor.src = "";
                 loader.style.display = 'block';
                 document.getElementById('fotoTitle').textContent = `Cargando Blanco - ${mes}...`;
                 document.getElementById('modalFoto').style.display = 'flex';
@@ -586,13 +587,14 @@
                 };
 
                 visor.onerror = () => {
-                    // Si falla la miniatura, intentar el link original
-                    if (visor.src !== url) {
+                    const ucUrl = fileId ? `https://drive.google.com/uc?export=view&id=${fileId}` : "";
+                    if (fileId && visor.src !== ucUrl) {
+                        visor.src = ucUrl;
+                    } else if (visor.src !== url) {
                         visor.src = url;
                     } else {
                         loader.style.display = 'none';
-                        document.getElementById('fotoTitle').textContent = "No se pudo previsualizar";
-                        alert("No pudimos mostrar la vista rápida. Usa el botón 'Abrir en Drive'.");
+                        document.getElementById('fotoTitle').textContent = "Vista no disponible";
                         if (btnElement) btnElement.textContent = originalText;
                     }
                 };
