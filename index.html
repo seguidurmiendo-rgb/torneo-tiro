@@ -426,9 +426,10 @@
         <div id="modalFoto" class="modal">
             <div class="modal-content" style="max-width: 90%; width: auto;">
                 <h2 id="fotoTitle" style="margin-bottom: 1rem;">Evidencia del Blanco</h2>
-                <div id="fotoContainer" style="text-align: center;">
+                <div id="fotoContainer" style="text-align: center; min-height: 200px; display: flex; align-items: center; justify-content: center; background: #222; border-radius: 8px;">
+                    <div id="fotoLoader" class="loader" style="display: block; margin: 0;"></div>
                     <img id="imgVisor" src=""
-                        style="max-width: 100%; height: auto; border-radius: 8px; border: 2px solid var(--primary);">
+                        style="max-width: 100%; height: auto; border-radius: 8px; border: 2px solid var(--primary); display: none;">
                 </div>
                 <button class="btn btn-primary" onclick="cerrarModal('modalFoto')"
                     style="margin-top: 1rem; width: 100%;">Cerrar</button>
@@ -535,16 +536,40 @@
                     return;
                 }
 
+                const visor = document.getElementById('imgVisor');
+                const loader = document.getElementById('fotoLoader');
+                
+                // Reset state
+                visor.style.display = 'none';
+                loader.style.display = 'block';
+                document.getElementById('fotoTitle').textContent = `Cargando Blanco - ${mes}...`;
+                document.getElementById('modalFoto').style.display = 'flex';
+
                 // Transformar URL de Drive para que sea incrustable (Direct link)
                 let directUrl = url;
                 if (url.includes("drive.google.com")) {
-                    const fileId = url.split("/d/")[1].split("/")[0];
-                    directUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
+                    try {
+                        const fileId = url.split("/d/")[1].split("/")[0];
+                        directUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
+                    } catch (e) {
+                        console.error("Error transformando URL de Drive:", e);
+                    }
                 }
 
-                document.getElementById('imgVisor').src = directUrl;
-                document.getElementById('fotoTitle').textContent = `Blanco - ${mes}`;
-                document.getElementById('modalFoto').style.display = 'flex';
+                // Configurar carga
+                visor.onload = () => {
+                    loader.style.display = 'none';
+                    visor.style.display = 'block';
+                    document.getElementById('fotoTitle').textContent = `Blanco - ${mes}`;
+                };
+                
+                visor.onerror = () => {
+                    loader.style.display = 'none';
+                    alert("No se pudo cargar la imagen. Revisa los permisos de Drive.");
+                    cerrarModal('modalFoto');
+                };
+
+                visor.src = directUrl;
             }
 
             // --- ADMIN LOGIC ---
