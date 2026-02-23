@@ -530,11 +530,19 @@
             }
 
             function abrirVisor(url, mes) {
-                if (!url || url.includes("Error")) {
+                if (!url || url.includes("Error") || url === "") {
                     alert("No hay foto disponible para esta entrada.");
                     return;
                 }
-                document.getElementById('imgVisor').src = url;
+
+                // Transformar URL de Drive para que sea incrustable (Direct link)
+                let directUrl = url;
+                if (url.includes("drive.google.com")) {
+                    const fileId = url.split("/d/")[1].split("/")[0];
+                    directUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
+                }
+
+                document.getElementById('imgVisor').src = directUrl;
                 document.getElementById('fotoTitle').textContent = `Blanco - ${mes}`;
                 document.getElementById('modalFoto').style.display = 'flex';
             }
@@ -782,8 +790,12 @@
                 document.getElementById('newPago').value = s.Pago || "No";
 
                 editMode = { action: 'updateShooter', dni: dni };
+
+                // Actualizar UI sin disparar el .click() que resetea
                 showTab('shooterForm');
-                document.getElementById('tabShooter').click();
+                document.getElementById('tabScore').className = 'btn btn-outline';
+                document.getElementById('tabShooter').className = 'btn btn-primary';
+                document.getElementById('tabManage').className = 'btn btn-outline';
                 document.querySelector('#shooterForm button[type="submit"]').textContent = "Actualizar Tirador";
             }
 
@@ -854,8 +866,12 @@
                 document.getElementById('fotoFile').required = false; // No obligatorio en edición
 
                 scoreEditMode = { action: 'updateScore', dni: dni, mes: mes };
+
+                // Actualizar UI sin disparar el .click()
                 showTab('scoreForm');
-                document.getElementById('tabScore').click();
+                document.getElementById('tabScore').className = 'btn btn-primary';
+                document.getElementById('tabShooter').className = 'btn btn-outline';
+                document.getElementById('tabManage').className = 'btn btn-outline';
                 document.querySelector('#scoreForm button[type="submit"]').textContent = "Actualizar Puntaje";
             }
 
