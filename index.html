@@ -154,17 +154,26 @@
             padding: 2rem;
             border-radius: 20px;
             transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            cursor: pointer;
             position: relative;
             overflow: hidden;
             backdrop-filter: blur(10px);
         }
 
-        .card:hover {
+        /* Card interactiva (la de gestión o la que antes se usaba en ranking) */
+        .card-interactive {
+            cursor: pointer;
+        }
+
+        .card-interactive:hover {
             transform: translateY(-10px);
             border-color: var(--primary);
             background: rgba(255, 255, 255, 0.05);
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Card estática (Podio) */
+        .card-static {
+            cursor: default;
         }
 
         .rank-number {
@@ -380,12 +389,48 @@
 
         /* Mobile Adjustments */
         @media (max-width: 600px) {
-            .zones-input {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
             .container {
                 padding: 1rem;
+            }
+
+            header {
+                padding: 2rem 1rem;
+            }
+
+            header img {
+                height: 80px !important;
+            }
+
+            header h1 {
+                font-size: 1.5rem;
+            }
+
+            .card {
+                padding: 1.2rem;
+                border-radius: 15px;
+            }
+
+            .score-big {
+                font-size: 2rem;
+            }
+
+            .rank-number {
+                font-size: 4rem;
+                top: -10px;
+            }
+
+            .ranking-table th,
+            .ranking-table td {
+                padding: 0.8rem 0.5rem;
+                font-size: 0.8rem;
+            }
+
+            .ranking-table td:first-child {
+                width: 50px;
+            }
+
+            .zones-input {
+                grid-template-columns: repeat(3, 1fr);
             }
         }
     </style>
@@ -406,11 +451,19 @@
         </div>
 
         <section id="rankingSection">
-            <h2 style="margin-bottom: 2rem; display: flex; align-items: center; gap: 10px;">
-                🏆 Ranking General
+            <h2
+                style="margin-bottom: 2rem; display: flex; align-items: center; gap: 10px; font-family: 'Orbitron'; font-size: 1.2rem; background: var(--gold); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">
+                🏆 Podio de Honor
             </h2>
             <div id="loader" class="loader"></div>
 
+            <div id="podiumGrid" class="ranking-grid" style="margin-bottom: 4rem;">
+                <!-- Solo Top 3 -->
+            </div>
+
+            <h2 style="margin-bottom: 2rem; font-family: 'Orbitron'; font-size: 1.2rem; opacity: 0.8;">
+                📊 Tabla de Posiciones
+            </h2>
             <div id="rankingTableContainer" class="ranking-table-container" style="display: none;">
                 <table class="ranking-table">
                     <thead>
@@ -422,13 +475,9 @@
                         </tr>
                     </thead>
                     <tbody id="rankingTableBody">
-                        <!-- Dinámico -->
+                        <!-- Dinámico Todos -->
                     </tbody>
                 </table>
-            </div>
-
-            <div id="rankingGrid" class="ranking-grid">
-                <!-- Se llenará dinámicamente -->
             </div>
         </section>
     </div>
@@ -625,7 +674,7 @@
                 renderRanking();
             } catch (err) {
                 console.error(err);
-                document.getElementById('rankingGrid').innerHTML = "<p>Error al cargar datos.</p>";
+                document.getElementById('podiumGrid').innerHTML = "<p>Error al cargar datos.</p>";
             } finally {
                 showLoader(false);
             }
@@ -649,11 +698,11 @@
         }
 
         function renderRanking() {
-            const grid = document.getElementById('rankingGrid');
+            const podiumGrid = document.getElementById('podiumGrid');
             const tableBody = document.getElementById('rankingTableBody');
             const tableContainer = document.getElementById('rankingTableContainer');
 
-            grid.innerHTML = "";
+            podiumGrid.innerHTML = "";
             tableBody.innerHTML = "";
 
             if (allShootData.length > 0) {
@@ -666,37 +715,35 @@
                 const podTextClass = pos <= 3 ? posTextClass : '';
                 const posCardClass = pos <= 3 ? `card-${pos}` : '';
 
-                // Crear Fila en Tabla
+                // 1. Renderizar Fila en Tabla (Interactiva siempre)
                 const tr = document.createElement('tr');
                 tr.style.cursor = "pointer";
                 tr.onclick = () => verDetalle(item.DNI);
                 tr.innerHTML = `
                         <td><span class="podium-text ${podTextClass}">${pos}°</span></td>
-                        <td><strong>${item.Nombre} ${item.Apellido}</strong></td>
-                        <td style="font-size: 0.85rem; color: #888;">${item.Arma} <span style="opacity:0.5; margin:0 5px;">|</span> ${item.Calibre}</td>
+                        <td style="font-weight: 600;">${item.Nombre} ${item.Apellido}</td>
+                        <td style="font-size: 0.85rem; color: #888;">${item.Arma} • ${item.Calibre}</td>
                         <td style="text-align: right;"><span class="podium-text ${podTextClass}">${item.totalScore} pts</span></td>
                     `;
                 tableBody.appendChild(tr);
 
-                // Crear Card (Reutilizamos las clases anteriores para el texto si es podio)
-                const metallicClass = pos === 1 ? 'text-gold' : pos === 2 ? 'text-silver' : pos === 3 ? 'text-bronze' : '';
-
-                const div = document.createElement('div');
-                div.className = `card ${posCardClass}`;
-                div.onclick = () => verDetalle(item.DNI);
-                div.innerHTML = `
-                        <div class="rank-number">${pos}</div>
-                        <h3 style="font-weight: 600; letter-spacing: -0.5px;">${item.Nombre} ${item.Apellido}</h3>
-                        <div class="score-big ${posTextClass}">${item.totalScore.toLocaleString()} <span style="font-size: 1rem; opacity: 0.6;">pts</span></div>
-                        <p style="font-size: 0.85rem; color: #aaa; font-weight: 300;">${item.Arma} • ${item.Calibre}</p>
-                        <div style="margin-top: 2rem; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 2px;">
-                             ${pos === 1 ? "🥇 Lider del Torneo" : pos === 2 ? "🥈 Segundo Puesto" : pos === 3 ? "🥉 Tercer Puesto" : "Ver Expediente"}
-                        </div>
-                    `;
-                grid.appendChild(div);
+                // 2. Renderizar Card de Podio (Solo para Top 3, No Interactiva)
+                if (pos <= 3) {
+                    const div = document.createElement('div');
+                    div.className = `card card-static ${posCardClass}`;
+                    div.innerHTML = `
+                            <div class="rank-number">${pos}</div>
+                            <h3 style="font-weight: 600; font-size: 1.1rem; letter-spacing: -0.5px;">${item.Nombre} ${item.Apellido}</h3>
+                            <div class="score-big ${posTextClass}" style="margin: 0.5rem 0;">${item.totalScore.toLocaleString()} <span style="font-size: 0.9rem; opacity: 0.6;">pts</span></div>
+                            <p style="font-size: 0.8rem; color: #aaa; font-weight: 300;">${item.Arma} • ${item.Calibre}</p>
+                            <div style="margin-top: 1.5rem; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 2px;">
+                                 ${pos === 1 ? "🥇 CAMPEÓN" : pos === 2 ? "🥈 SEGUNDO" : "🥉 TERCERO"}
+                            </div>
+                        `;
+                    podiumGrid.appendChild(div);
+                }
             });
         }
-
         async function verDetalle(dni) {
             document.getElementById('modalDetalle').style.display = 'flex';
             const det = await fetch(`${API_URL}?action=getShooterDetails&dni=${dni}`, {
