@@ -440,8 +440,10 @@
                     <img id="imgVisor" src=""
                         style="max-width: 100%; height: auto; border-radius: 8px; border: 2px solid var(--primary); display: none;">
                 </div>
-                <button class="btn btn-primary" onclick="cerrarModal('modalFoto')"
-                    style="margin-top: 1rem; width: 100%;">Cerrar</button>
+                <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+                    <button class="btn btn-outline" id="btnOpenDrive" style="flex: 1;">Abrir en Drive</button>
+                    <button class="btn btn-primary" onclick="cerrarModal('modalFoto')" style="flex: 1;">Cerrar</button>
+                </div>
             </div>
         </div>
 
@@ -547,6 +549,7 @@
 
                 const visor = document.getElementById('imgVisor');
                 const loader = document.getElementById('fotoLoader');
+                const btnDrive = document.getElementById('btnOpenDrive');
                 const originalText = btnElement ? btnElement.textContent : "";
 
                 if (btnElement) btnElement.textContent = "⏳ Cargando...";
@@ -557,26 +560,24 @@
                 document.getElementById('fotoTitle').textContent = `Cargando Blanco - ${mes}...`;
                 document.getElementById('modalFoto').style.display = 'flex';
 
-                // Transformar URL de Drive para que sea incrustable (Direct link)
-                let directUrl = url;
+                // Configurar botón de emergencia
+                btnDrive.onclick = () => window.open(url, '_blank');
+
+                // Identificar ID de Drive
+                let fileId = "";
                 if (url.includes("drive.google.com")) {
                     try {
-                        let fileId = "";
                         if (url.includes("/d/")) {
                             fileId = url.split("/d/")[1].split("/")[0];
                         } else if (url.includes("id=")) {
                             fileId = url.split("id=")[1].split("&")[0];
                         }
-
-                        if (fileId) {
-                            directUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
-                        }
-                    } catch (e) {
-                        console.error("Error transformando URL de Drive:", e);
-                    }
+                    } catch (e) { console.error("Error ID Drive:", e); }
                 }
 
-                // Configurar carga
+                // URL de miniatura (mucho más confiable para incrustar en móviles)
+                let directUrl = fileId ? `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000` : url;
+
                 visor.onload = () => {
                     loader.style.display = 'none';
                     visor.style.display = 'block';
@@ -585,12 +586,15 @@
                 };
 
                 visor.onerror = () => {
-                    loader.style.display = 'none';
-                    if (confirm("No se pudo cargar la vista rápida. ¿Revisar permisos o abrir en Drive directamente?")) {
-                        window.open(url, '_blank');
+                    // Si falla la miniatura, intentar el link original
+                    if (visor.src !== url) {
+                        visor.src = url;
+                    } else {
+                        loader.style.display = 'none';
+                        document.getElementById('fotoTitle').textContent = "No se pudo previsualizar";
+                        alert("No pudimos mostrar la vista rápida. Usa el botón 'Abrir en Drive'.");
+                        if (btnElement) btnElement.textContent = originalText;
                     }
-                    cerrarModal('modalFoto');
-                    if (btnElement) btnElement.textContent = originalText;
                 };
 
                 visor.src = directUrl;
