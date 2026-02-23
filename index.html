@@ -236,45 +236,37 @@
             width: 80px;
             text-align: center;
             font-family: 'Orbitron';
+            background: rgba(255, 255, 255, 0.03);
         }
 
         .ranking-table td:last-child {
             border-radius: 0 12px 12px 0;
             text-align: right;
-            color: var(--primary);
             font-weight: 800;
             font-size: 1.1rem;
+            background: rgba(255, 255, 255, 0.03);
         }
 
-        /* Podium Classes */
-        .card-1 {
-            border: 2px solid #bf953f;
-            animation: pulseGlow 3s infinite;
+        /* Podium Classes for Table with Spans */
+        .podium-text {
+            display: inline-block;
         }
 
-        .card-2 {
-            border: 1px solid #70706f;
-        }
-
-        .card-3 {
-            border: 1px solid #804a00;
-        }
-
-        .text-gold {
+        .pos-1-text {
             background: var(--gold);
             -webkit-background-clip: text;
             background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 
-        .text-silver {
+        .pos-2-text {
             background: var(--silver);
             -webkit-background-clip: text;
             background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 
-        .text-bronze {
+        .pos-3-text {
             background: var(--bronze);
             -webkit-background-clip: text;
             background-clip: text;
@@ -403,6 +395,8 @@
 
     <header>
         <div class="brand">Club SITAS</div>
+        <img src="club-sitas-white.png" alt="Club SITAS"
+            style="height: 120px; margin: 1rem auto; display: block; filter: drop-shadow(0 0 10px rgba(212,175,55,0.2));">
         <h1>Torneo Anual de Tiradores</h1>
     </header>
 
@@ -668,7 +662,8 @@
 
             allShootData.forEach((item, index) => {
                 const pos = index + 1;
-                const posTextClass = pos === 1 ? 'text-gold' : pos === 2 ? 'text-silver' : pos === 3 ? 'text-bronze' : '';
+                const posTextClass = pos === 1 ? 'pos-1-text' : pos === 2 ? 'pos-2-text' : pos === 3 ? 'pos-3-text' : '';
+                const podTextClass = pos <= 3 ? posTextClass : '';
                 const posCardClass = pos <= 3 ? `card-${pos}` : '';
 
                 // Crear Fila en Tabla
@@ -676,14 +671,16 @@
                 tr.style.cursor = "pointer";
                 tr.onclick = () => verDetalle(item.DNI);
                 tr.innerHTML = `
-                        <td class="${posTextClass}">${pos}°</td>
+                        <td><span class="podium-text ${podTextClass}">${pos}°</span></td>
                         <td><strong>${item.Nombre} ${item.Apellido}</strong></td>
                         <td style="font-size: 0.85rem; color: #888;">${item.Arma} <span style="opacity:0.5; margin:0 5px;">|</span> ${item.Calibre}</td>
-                        <td class="${posTextClass}" style="text-align: right;">${item.totalScore} pts</td>
+                        <td style="text-align: right;"><span class="podium-text ${podTextClass}">${item.totalScore} pts</span></td>
                     `;
                 tableBody.appendChild(tr);
 
-                // Crear Card
+                // Crear Card (Reutilizamos las clases anteriores para el texto si es podio)
+                const metallicClass = pos === 1 ? 'text-gold' : pos === 2 ? 'text-silver' : pos === 3 ? 'text-bronze' : '';
+
                 const div = document.createElement('div');
                 div.className = `card ${posCardClass}`;
                 div.onclick = () => verDetalle(item.DNI);
