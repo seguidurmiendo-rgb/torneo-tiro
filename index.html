@@ -157,6 +157,10 @@
             backdrop-filter: blur(5px);
         }
 
+        #modalFoto {
+            z-index: 2000;
+        }
+
         .modal-content {
             background: var(--secondary);
             padding: 2.5rem;
@@ -426,7 +430,8 @@
         <div id="modalFoto" class="modal">
             <div class="modal-content" style="max-width: 90%; width: auto;">
                 <h2 id="fotoTitle" style="margin-bottom: 1rem;">Evidencia del Blanco</h2>
-                <div id="fotoContainer" style="text-align: center; min-height: 200px; display: flex; align-items: center; justify-content: center; background: #222; border-radius: 8px;">
+                <div id="fotoContainer"
+                    style="text-align: center; min-height: 200px; display: flex; align-items: center; justify-content: center; background: #222; border-radius: 8px;">
                     <div id="fotoLoader" class="loader" style="display: block; margin: 0;"></div>
                     <img id="imgVisor" src=""
                         style="max-width: 100%; height: auto; border-radius: 8px; border: 2px solid var(--primary); display: none;">
@@ -522,7 +527,7 @@
                     <td style="padding:0.5rem;">${s.Mes}</td>
                     <td style="padding:0.5rem; color:var(--primary); font-weight:bold;">${s.PuntajeTotal}</td>
                     <td style="padding:0.5rem;">
-                        <button class="btn btn-outline" style="padding:0.3rem 0.6rem; font-size:0.7rem;" onclick="abrirVisor('${s.FotoBlanco}', '${s.Mes}')">Ver Blanco</button>
+                        <button class="btn btn-outline" style="padding:0.3rem 0.6rem; font-size:0.7rem;" onclick="abrirVisor('${s.FotoBlanco}', '${s.Mes}', this)">Ver Blanco</button>
                     </td>
                 </tr>`;
                 });
@@ -530,15 +535,18 @@
                 document.getElementById('detHistorial').innerHTML = html;
             }
 
-            function abrirVisor(url, mes) {
-                if (!url || url.includes("Error") || url === "") {
+            function abrirVisor(url, mes, btnElement = null) {
+                if (!url || url.includes("Error") || url === "" || url === "undefined") {
                     alert("No hay foto disponible para esta entrada.");
                     return;
                 }
 
                 const visor = document.getElementById('imgVisor');
                 const loader = document.getElementById('fotoLoader');
-                
+                const originalText = btnElement ? btnElement.textContent : "";
+
+                if (btnElement) btnElement.textContent = "⏳ Cargando...";
+
                 // Reset state
                 visor.style.display = 'none';
                 loader.style.display = 'block';
@@ -561,12 +569,14 @@
                     loader.style.display = 'none';
                     visor.style.display = 'block';
                     document.getElementById('fotoTitle').textContent = `Blanco - ${mes}`;
+                    if (btnElement) btnElement.textContent = originalText;
                 };
-                
+
                 visor.onerror = () => {
                     loader.style.display = 'none';
-                    alert("No se pudo cargar la imagen. Revisa los permisos de Drive.");
+                    alert("No se pudo cargar la imagen. Revisa los permisos de Drive o internet.");
                     cerrarModal('modalFoto');
+                    if (btnElement) btnElement.textContent = originalText;
                 };
 
                 visor.src = directUrl;
@@ -859,7 +869,10 @@
                             <div>
                                 <strong>${s.Mes}</strong>: ${s.PuntajeTotal} pts
                             </div>
-                            <button class="btn btn-outline" onclick="prepararEdicionPuntaje('${dni}', '${s.Mes}')">Editar</button>
+                            <div style="display:flex; gap:0.5rem;">
+                                <button class="btn btn-outline" style="padding:0.4rem;" onclick="abrirVisor('${s.FotoBlanco}', '${s.Mes}', this)">🖼️</button>
+                                <button class="btn btn-outline" style="padding:0.4rem;" onclick="prepararEdicionPuntaje('${dni}', '${s.Mes}')">Editar</button>
+                            </div>
                         </div>
                     `;
                     list.appendChild(div);
