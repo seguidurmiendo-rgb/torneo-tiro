@@ -367,8 +367,9 @@
                     </div>
 
                     <div class="form-group">
-                        <label>Link Foto del Blanco (Google Drive/OneDrive)</label>
-                        <input type="url" id="fotoBlanco" placeholder="https://..." required>
+                        <label>Foto del Blanco (Carga automática a Drive)</label>
+                        <input type="file" id="fotoFile" accept="image/*" required>
+                        <small style="color: #888;">Se guardará automáticamente en tu Drive.</small>
                     </div>
 
                     <div id="formMsg" style="margin: 1rem 0; color: var(--accent); font-weight: bold;"></div>
@@ -582,8 +583,19 @@
         document.getElementById('scoreForm').onsubmit = async (e) => {
             e.preventDefault();
             const msg = document.getElementById('formMsg');
-            msg.textContent = "Guardando puntaje...";
+            msg.textContent = "Procesando foto y puntaje...";
             msg.style.color = "var(--primary)";
+
+            // Leer archivo si existe
+            const fileInput = document.getElementById('fotoFile');
+            let base64 = null;
+            if (fileInput.files && fileInput.files[0]) {
+                const reader = new FileReader();
+                base64 = await new Promise((resolve) => {
+                    reader.onload = (ev) => resolve(ev.target.result);
+                    reader.readAsDataURL(fileInput.files[0]);
+                });
+            }
 
             const scoreData = {
                 dni: document.getElementById('selectTirador').value,
@@ -599,7 +611,7 @@
                 z2: parseInt(document.getElementById('z2').value) || 0,
                 z1: parseInt(document.getElementById('z1').value) || 0,
                 z0: parseInt(document.getElementById('z0').value) || 0,
-                fotoBlanco: document.getElementById('fotoBlanco').value
+                fotoBase64: base64
             };
 
             const payload = {
