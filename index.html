@@ -557,8 +557,16 @@
                 let directUrl = url;
                 if (url.includes("drive.google.com")) {
                     try {
-                        const fileId = url.split("/d/")[1].split("/")[0];
-                        directUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
+                        let fileId = "";
+                        if (url.includes("/d/")) {
+                            fileId = url.split("/d/")[1].split("/")[0];
+                        } else if (url.includes("id=")) {
+                            fileId = url.split("id=")[1].split("&")[0];
+                        }
+
+                        if (fileId) {
+                            directUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
+                        }
                     } catch (e) {
                         console.error("Error transformando URL de Drive:", e);
                     }
@@ -574,7 +582,9 @@
 
                 visor.onerror = () => {
                     loader.style.display = 'none';
-                    alert("No se pudo cargar la imagen. Revisa los permisos de Drive o internet.");
+                    if (confirm("No se pudo cargar la vista rápida. ¿Revisar permisos o abrir en Drive directamente?")) {
+                        window.open(url, '_blank');
+                    }
                     cerrarModal('modalFoto');
                     if (btnElement) btnElement.textContent = originalText;
                 };
