@@ -745,29 +745,46 @@
             });
         }
         async function verDetalle(dni) {
-            document.getElementById('modalDetalle').style.display = 'flex';
-            const det = await fetch(`${API_URL}?action=getShooterDetails&dni=${dni}`, {
-                mode: 'cors',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' }
-            }).then(r => r.json());
+            const modal = document.getElementById('modalDetalle');
+            const detNombre = document.getElementById('detNombre');
+            const detDNI = document.getElementById('detDNI');
+            const detHistorial = document.getElementById('detHistorial');
 
-            document.getElementById('detNombre').textContent = `${det.shooter.Nombre} ${det.shooter.Apellido}`;
-            document.getElementById('detDNI').textContent = `DNI: ${det.shooter.DNI} | Socio: ${det.shooter.NumeroSocio || 'No'}`;
+            // 1. Mostrar modal y Resetear a estado de carga
+            modal.style.display = 'flex';
+            detNombre.textContent = "Cargando...";
+            detDNI.textContent = "";
+            detHistorial.innerHTML = '<div class="loader" style="display:block;"></div>';
 
-            let html = `<table style="width:100%; border-collapse:collapse; margin-top:1rem;">
-                <tr style="border-bottom:1px solid #444;"><th>Mes</th><th>Puntos</th><th>Acción</th></tr>`;
+            try {
+                const det = await fetch(`${API_URL}?action=getShooterDetails&dni=${dni}`, {
+                    mode: 'cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+                }).then(r => r.json());
 
-            det.scores.forEach(s => {
-                html += `<tr style="border-bottom:1px solid #333;">
-                    <td style="padding:0.5rem;">${s.Mes}</td>
-                    <td style="padding:0.5rem; color:var(--primary); font-weight:bold;">${s.PuntajeTotal}</td>
-                    <td style="padding:0.5rem;">
-                        <button class="btn btn-outline" style="padding:0.3rem 0.6rem; font-size:0.7rem;" onclick="abrirVisor('${s.FotoBlanco}', '${s.Mes}', this)">Ver Blanco</button>
-                    </td>
-                </tr>`;
-            });
-            html += `</table>`;
-            document.getElementById('detHistorial').innerHTML = html;
+                // 2. Poblar con los datos correctos
+                detNombre.textContent = `${det.shooter.Nombre} ${det.shooter.Apellido}`;
+                detDNI.textContent = `DNI: ${det.shooter.DNI} | Socio: ${det.shooter.NumeroSocio || 'No'}`;
+
+                let html = `<table style="width:100%; border-collapse:collapse; margin-top:1rem;">
+                    <tr style="border-bottom:1px solid #444;"><th>Mes</th><th>Puntos</th><th>Acción</th></tr>`;
+
+                det.scores.forEach(s => {
+                    html += `<tr style="border-bottom:1px solid #333;">
+                        <td style="padding:0.8rem 0.5rem;">${s.Mes}</td>
+                        <td style="padding:0.8rem 0.5rem; color:var(--primary); font-weight:bold;">${s.PuntajeTotal}</td>
+                        <td style="padding:0.8rem 0.5rem;">
+                            <button class="btn btn-outline" style="padding:0.4rem 0.8rem; font-size:0.75rem;" onclick="abrirVisor('${s.FotoBlanco}', '${s.Mes}', this)">Ver Blanco</button>
+                        </td>
+                    </tr>`;
+                });
+                html += `</table>`;
+                detHistorial.innerHTML = html;
+            } catch (err) {
+                console.error(err);
+                detNombre.textContent = "Error al cargar";
+                detHistorial.innerHTML = "<p>No se pudo obtener la información del tirador.</p>";
+            }
         }
 
         function abrirVisor(url, mes, btnElement = null) {
