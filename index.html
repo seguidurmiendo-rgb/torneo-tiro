@@ -626,6 +626,34 @@
                     <div id="manageList" class="grid-list" style="max-height: 400px; overflow-y: auto;">
                         <!-- Dinámico -->
                     </div>
+
+                    <!-- Nueva Sección: Cambio de Contraseña -->
+                    <div id="passwordPanel" style="margin-top: 3rem; padding-top: 2rem; border-top: 1px dashed #444;">
+                        <h3
+                            style="font-family: 'Orbitron'; font-size: 1rem; margin-bottom: 1rem; color: var(--primary);">
+                            🔐 Seguridad Administrativa</h3>
+                        <button class="btn btn-outline" id="btnShowPassChange" style="width: 100%;"
+                            onclick="togglePassChange()">Cambiar Contraseña de Acceso</button>
+
+                        <div id="passChangeForm"
+                            style="display: none; margin-top: 1.5rem; background: rgba(255,255,255,0.02); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--glass-border);">
+                            <div class="form-group">
+                                <label>Nueva Contraseña (mín. 4 caracteres)</label>
+                                <input type="password" id="newAdminPass" placeholder="Ingrese nueva clave">
+                            </div>
+                            <div class="form-group">
+                                <label>Confirmar Nueva Contraseña</label>
+                                <input type="password" id="newAdminPassConfirm" placeholder="Repita la clave">
+                            </div>
+                            <div id="passMsg" style="margin-bottom: 1rem; font-size: 0.85rem;"></div>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <button class="btn btn-primary" onclick="actualizarContraseñaServidor()"
+                                    style="flex: 2;">Guardar Nueva Clave</button>
+                                <button class="btn btn-outline" onclick="togglePassChange()"
+                                    style="flex: 1;">Cancelar</button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -881,17 +909,44 @@
             document.getElementById(panelId).style.display = 'block';
         }
 
-        document.getElementById('btnVerifyAuth').onclick = () => {
+        document.getElementById('btnVerifyAuth').onclick = async () => {
             const pass = document.getElementById('adminPass').value;
-            // Verificación local simple (la real ocurre en el servidor)
-            if (pass === "SITAS2026") {
-                document.getElementById('adminAuth').style.display = 'none';
-                document.getElementById('adminPanel').style.display = 'block';
-                document.getElementById('adminTitle').textContent = "Panel de Control";
-                document.getElementById('adminSub').textContent = "Gestión de Torneo";
-                document.getElementById('tabScore').click(); // Ir a carga por defecto
-            } else {
-                alert("Contraseña Incorrecta");
+            if (!pass) return alert("Ingrese una contraseña");
+
+            const btn = document.getElementById('btnVerifyAuth');
+            const originalText = btn.textContent;
+            btn.textContent = "⏳ Verificando...";
+            btn.disabled = true;
+
+            try {
+                // Verificación real contra el servidor
+                const res = await fetch(API_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        password: pass,
+                        action: 'getShooters' // Usamos una acción segura para probar la clave
+                    }),
+                    mode: 'cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+                });
+                const result = await res.json();
+
+                if (result.error === "Unauthorized") {
+                    alert("Contraseña Incorrecta");
+                } else {
+                    document.getElementById('adminAuth').style.display = 'none';
+                    document.getElementById('adminPanel').style.display = 'block';
+                    document.getElementById('adminTitle').textContent = "Panel de Control";
+                    document.getElementById('adminSub').textContent = "Gestión de Torneo";
+                    document.getElementById('tabScore').click();
+                }
+            } catch (e) {
+                // Si hay error de red o similar, avisamos
+                console.error(e);
+                alert("Error de conexión al verificar contraseña.");
+            } finally {
+                btn.textContent = originalText;
+                btn.disabled = false;
             }
         };
 
@@ -1026,6 +1081,10 @@
                 document.getElementById('shooterForm').reset();
                 document.getElementById('formMsg').textContent = "";
                 document.getElementById('shooterMsg').textContent = "";
+                // Reset password change UI
+                document.getElementById('passChangeForm').style.display = 'none';
+                document.getElementById('btnShowPassChange').style.display = 'block';
+                document.getElementById('passMsg').textContent = "";
             }
         }
 
@@ -1217,6 +1276,72 @@
                 scoreEditMode = { action: 'saveScore', dni: null, mes: null };
             }
         });
+
+        // --- PASSWORD CHANGE LOGIC ---
+        function togglePassChange() {
+            const form = document.getElementById('passChangeForm');
+            const btn = document.getElementById('btnShowPassChange');
+            const isHidden = form.style.display === 'none';
+
+            form.style.display = isHidden ? 'block' : 'none';
+            btn.style.display = isHidden ? 'none' : 'block';
+
+            if (isHidden) {
+                document.getElementById('newAdminPass').value = "";
+                document.getElementById('newAdminPassConfirm').value = "";
+                document.getElementById('passMsg').textContent = "";
+            }
+        }
+
+        async function actualizarContraseñaServidor() {
+            const newPass = document.getElementById('newAdminPass').value;
+            const confirmPass = document.getElementById('newAdminPassConfirm').value;
+            const msg = document.getElementById('passMsg');
+
+            if (newPass.length < 4) {
+                msg.textContent = "❌ La clave es muy corta.";
+                msg.style.color = "var(--accent)";
+                return;
+            }
+
+            if (newPass !== confirmPass) {
+                msg.textContent = "❌ Las claves no coinciden.";
+                msg.style.color = "var(--accent)";
+                return;
+            }
+
+            if (!confirm("¿Está seguro de que desea cambiar la contraseña? Deberá usar la nueva la próxima vez que ingrese.")) return;
+
+            msg.textContent = "⏳ Actualizando...";
+            msg.style.color = "var(--primary)";
+
+            try {
+                const res = await fetch(API_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        password: document.getElementById('adminPass').value,
+                        action: 'updatePassword',
+                        newPassword: newPass
+                    }),
+                    mode: 'cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+                });
+                const result = await res.json();
+
+                if (result.success) {
+                    alert("¡Contraseña actualizada con éxito! Se guardó en su Drive.");
+                    // Actualizar el valor local para que las siguientes acciones en la misma sesión funcionen
+                    document.getElementById('adminPass').value = newPass;
+                    togglePassChange();
+                } else {
+                    msg.textContent = "❌ Error: " + result.error;
+                    msg.style.color = "var(--accent)";
+                }
+            } catch (e) {
+                msg.textContent = "❌ Error de conexión.";
+                msg.style.color = "var(--accent)";
+            }
+        }
     </script>
 </body>
 
