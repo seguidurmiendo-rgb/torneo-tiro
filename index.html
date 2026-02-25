@@ -433,6 +433,65 @@
                 grid-template-columns: repeat(3, 1fr);
             }
         }
+
+        /* Estilos de Impresión */
+        @media print {
+            body {
+                background: #fff !important;
+                color: #000 !important;
+            }
+
+            .container,
+            header,
+            .auth-bar,
+            .btn,
+            .ranking-grid,
+            #rankingSection,
+            .modal {
+                display: none !important;
+            }
+
+            #printableReport {
+                display: block !important;
+                padding: 2rem;
+                color: #000 !important;
+            }
+
+            .print-table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 2rem;
+            }
+
+            .print-table th,
+            .print-table td {
+                border: 1px solid #ddd;
+                padding: 12px;
+                text-align: left;
+                color: #000 !important;
+            }
+
+            .print-title {
+                text-align: center;
+                margin-bottom: 2rem;
+                font-family: 'Orbitron', serif;
+                text-transform: uppercase;
+                border-bottom: 2px solid #000;
+                padding-bottom: 1rem;
+            }
+
+            .print-footer {
+                margin-top: 3rem;
+                font-size: 0.8rem;
+                text-align: right;
+                border-top: 1px solid #ddd;
+                padding-top: 1rem;
+            }
+        }
+
+        #printableReport {
+            display: none;
+        }
     </style>
 </head>
 
@@ -447,7 +506,8 @@
 
     <div class="container">
         <div class="auth-bar">
-            <button class="btn btn-outline" id="btnAdmin">Panel Comisario</button>
+            <button class="btn btn-outline" id="btnReporte">📇 Imprimir Reporte</button>
+            <button class="btn btn-primary" id="btnAdmin">Panel Comisario</button>
         </div>
 
         <section id="rankingSection">
@@ -1344,6 +1404,127 @@
                 msg.style.color = "var(--accent)";
             }
         }
+    </script>
+
+    <!-- UI para Impresión (Invisible en Pantalla) -->
+    <div id="printableReport">
+        <div class="print-title">
+            <h1 style="color: #000;">Club SITAS</h1>
+            <h2 style="color: #000;" id="printHeader">Ranking Mensual de Tiro</h2>
+        </div>
+        <table class="print-table">
+            <thead>
+                <tr>
+                    <th>Pos</th>
+                    <th>Apellido y Nombre</th>
+                    <th>DNI</th>
+                    <th>Arma / Calibre</th>
+                    <th style="text-align: right;">Total</th>
+                </tr>
+            </thead>
+            <tbody id="printBody">
+                <!-- Dinámico -->
+            </tbody>
+        </table>
+        <div class="print-footer">
+            Sistema de Torneos SITAS - <span id="printDate"></span>
+        </div>
+    </div>
+
+    <!-- Modal de Selección de Mes para Reporte -->
+    <div id="modalReporte" class="modal">
+        <div class="modal-content">
+            <h2>Generar Reporte Mensual</h2>
+            <p style="margin-bottom: 2rem; color: #888;">Seleccione el mes para ver el ranking ordenado.</p>
+
+            <div class="form-group">
+                <label>Mes</label>
+                <select id="selectMesReporte">
+                    <option value="Enero">Enero</option>
+                    <option value="Febrero">Febrero</option>
+                    <option value="Marzo">Marzo</option>
+                    <option value="Abril">Abril</option>
+                    <option value="Mayo">Mayo</option>
+                    <option value="Junio">Junio</option>
+                    <option value="Julio">Julio</option>
+                    <option value="Agosto">Agosto</option>
+                    <option value="Septiembre">Septiembre</option>
+                    <option value="Octubre">Octubre</option>
+                    <option value="Noviembre">Noviembre</option>
+                    <option value="Diciembre">Diciembre</option>
+                </select>
+            </div>
+
+            <div id="reporteMsg" style="margin-bottom: 1rem; font-size: 0.9rem;"></div>
+
+            <div style="display: flex; gap: 1rem;">
+                <button class="btn btn-outline" onclick="cerrarModal('modalReporte')" style="flex: 1;">Cancelar</button>
+                <button class="btn btn-primary" id="btnConfirmReporte" style="flex: 2;">Generar e Imprimir</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('btnReporte').onclick = () => {
+            document.getElementById('modalReporte').style.display = 'flex';
+        };
+
+        document.getElementById('btnConfirmReporte').onclick = async () => {
+            const mes = document.getElementById('selectMesReporte').value;
+            const btn = document.getElementById('btnConfirmReporte');
+            const msg = document.getElementById('reporteMsg');
+
+            msg.textContent = `⏳ Cargando ranking de ${mes}...`;
+            msg.style.color = "var(--primary)";
+            btn.disabled = true;
+
+            try {
+                const res = await fetch(`${API_URL}?action=getMonthlyRankings&mes=${mes}`, {
+                    mode: 'cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+                });
+                const data = await res.json();
+
+                if (data.length === 0) {
+                    msg.textContent = `❌ No hay registros para el mes de ${mes}.`;
+                    msg.style.color = "var(--accent)";
+                    btn.disabled = false;
+                    return;
+                }
+
+                // Poblar tabla de impresión
+                const body = document.getElementById('printBody');
+                body.innerHTML = "";
+                data.forEach((item, index) => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${index + 1}°</td>
+                        <td style="font-weight: bold;">${item.Apellido}, ${item.Nombre}</td>
+                        <td>${item.DNI}</td>
+                        <td>${item.Arma} (${item.Calibre})</td>
+                        <td style="text-align: right; font-weight: bold;">${item.totalScore} pts</td>
+                    `;
+                    body.appendChild(tr);
+                });
+
+                document.getElementById('printHeader').textContent = `Ranking Torneo Anual - Mes: ${mes}`;
+                document.getElementById('printDate').textContent = new Date().toLocaleDateString();
+
+                msg.textContent = "✅ Listo para imprimir.";
+                msg.style.color = "var(--primary)";
+
+                // Disparar impresión
+                window.print();
+
+                cerrarModal('modalReporte');
+            } catch (e) {
+                console.error(e);
+                msg.textContent = "❌ Error al recuperar datos.";
+                msg.style.color = "var(--accent)";
+            } finally {
+                btn.disabled = false;
+            }
+        };
     </script>
 </body>
 
