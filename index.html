@@ -1197,73 +1197,104 @@
             }
         });
 
-        async function verGestionPuntajes(dni) {
-            const det = await fetch(`${API_URL}?action=getShooterDetails&dni=${dni}`, {
-                mode: 'cors',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' }
-            }).then(r => r.json());
-
+        async function verGestionPuntajes(dni, btnElement = null) {
             const list = document.getElementById('manageList');
-            list.innerHTML = `<button class="btn btn-outline" style="margin-bottom:1rem;" onclick="renderManageList()">⬅️ Volver</button>
+            const originalHTML = list.innerHTML;
+
+            // Mostrar carga en la lista
+            list.innerHTML = '<div class="loader" style="display:block;"></div><p style="text-align:center;">Recuperando puntajes...</p>';
+
+            try {
+                const det = await fetch(`${API_URL}?action=getShooterDetails&dni=${dni}`, {
+                    mode: 'cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+                }).then(r => r.json());
+
+                list.innerHTML = `<button class="btn btn-outline" style="margin-bottom:1rem;" onclick="renderManageList()">⬅️ Volver</button>
                                   <h3>Puntajes de ${det.shooter.Nombre}</h3>`;
 
-            if (det.scores.length === 0) {
-                list.innerHTML += "<p>No hay puntajes registrados.</p>";
-                return;
-            }
+                if (!det.scores || det.scores.length === 0) {
+                    list.innerHTML += "<p>No hay puntajes registrados.</p>";
+                    return;
+                }
 
-            det.scores.forEach(s => {
-                const div = document.createElement('div');
-                div.className = "card";
-                div.style.padding = "1rem";
-                div.style.marginBottom = "0.5rem";
-                div.innerHTML = `
+                det.scores.forEach(s => {
+                    const div = document.createElement('div');
+                    div.className = "card";
+                    div.style.padding = "1rem";
+                    div.style.marginBottom = "0.5rem";
+                    div.innerHTML = `
                          <div style="display:flex; justify-content:space-between; align-items:center;">
                             <div>
                                 <strong>${s.Mes}</strong>: ${s.PuntajeTotal} pts
                             </div>
                             <div style="display:flex; gap:0.5rem;">
                                 <button class="btn btn-outline" style="padding:0.4rem;" onclick="abrirVisor('${s.FotoBlanco}', '${s.Mes}', this)">🖼️</button>
-                                <button class="btn btn-outline" style="padding:0.4rem;" onclick="prepararEdicionPuntaje('${dni}', '${s.Mes}')">Editar</button>
+                                <button class="btn btn-outline" style="padding:0.4rem;" onclick="prepararEdicionPuntaje('${dni}', '${s.Mes}', this)">Editar</button>
                             </div>
                         </div>
                     `;
-                list.appendChild(div);
-            });
+                    list.appendChild(div);
+                });
+            } catch (e) {
+                console.error("Error al obtener detalles del tirador:", e);
+                list.innerHTML = `<p style="color:var(--accent); text-align:center;">Error al cargar puntajes: ${e.message}</p>
+                                  <button class="btn btn-outline" style="margin-top:1rem;" onclick="renderManageList()">⬅️ Volver</button>`;
+            }
         }
 
-        async function prepararEdicionPuntaje(dni, mes) {
-            const det = await fetch(`${API_URL}?action=getShooterDetails&dni=${dni}`, {
-                mode: 'cors',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' }
-            }).then(r => r.json());
+        async function prepararEdicionPuntaje(dni, mes, btnElement = null) {
+            const originalText = btnElement ? btnElement.textContent : "Editar";
+            if (btnElement) {
+                btnElement.textContent = "⏳...";
+                btnElement.disabled = true;
+            }
 
-            const score = det.scores.find(s => s.Mes === mes);
-            if (!score) return;
+            try {
+                const det = await fetch(`${API_URL}?action=getShooterDetails&dni=${dni}`, {
+                    mode: 'cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+                }).then(r => r.json());
 
-            document.getElementById('selectTirador').value = dni;
-            document.getElementById('selectMes').value = mes;
-            document.getElementById('z10').value = score.Z10;
-            document.getElementById('z9').value = score.Z9;
-            document.getElementById('z8').value = score.Z8;
-            document.getElementById('z7').value = score.Z7;
-            document.getElementById('z6').value = score.Z6;
-            document.getElementById('z5').value = score.Z5;
-            document.getElementById('z4').value = score.Z4;
-            document.getElementById('z3').value = score.Z3;
-            document.getElementById('z2').value = score.Z2;
-            document.getElementById('z1').value = score.Z1;
-            document.getElementById('z0').value = score.Z0;
-            document.getElementById('fotoFile').required = false; // No obligatorio en edición
+                const score = det.scores.find(s => s.Mes === mes);
+                if (!score) return;
 
-            scoreEditMode = { action: 'updateScore', dni: dni, mes: mes };
+                document.getElementById('selectTirador').value = dni;
+                document.getElementById('selectMes').value = mes;
+                document.getElementById('z10').value = score.Z10;
+                document.getElementById('z9').value = score.Z9;
+                document.getElementById('z8').value = score.Z8;
+                document.getElementById('z7').value = score.Z7;
+                document.getElementById('z6').value = score.Z6;
+                document.getElementById('z5').value = score.Z5;
+                document.getElementById('z4').value = score.Z4;
+                document.getElementById('z3').value = score.Z3;
+                document.getElementById('z2').value = score.Z2;
+                document.getElementById('z1').value = score.Z1;
+                document.getElementById('z0').value = score.Z0;
+                document.getElementById('fotoFile').required = false; // No obligatorio en edición
 
-            // Actualizar UI sin disparar el .click()
-            showTab('scoreForm');
-            document.getElementById('tabScore').className = 'btn btn-primary';
-            document.getElementById('tabShooter').className = 'btn btn-outline';
-            document.getElementById('tabManage').className = 'btn btn-outline';
-            document.querySelector('#scoreForm button[type="submit"]').textContent = "Actualizar Puntaje";
+                scoreEditMode = { action: 'updateScore', dni: dni, mes: mes };
+
+                // Actualizar UI sin disparar el .click()
+                showTab('scoreForm');
+                document.getElementById('tabScore').className = 'btn btn-primary';
+                document.getElementById('tabShooter').className = 'btn btn-outline';
+                document.getElementById('tabManage').className = 'btn btn-outline';
+                document.querySelector('#scoreForm button[type="submit"]').textContent = "Actualizar Puntaje";
+
+                if (btnElement) {
+                    btnElement.textContent = originalText;
+                    btnElement.disabled = false;
+                }
+            } catch (e) {
+                console.error("Error al preparar edición de puntaje:", e);
+                alert("No se pudo cargar el puntaje para editar.");
+                if (btnElement) {
+                    btnElement.textContent = originalText;
+                    btnElement.disabled = false;
+                }
+            }
         }
 
         let scoreEditMode = { action: 'saveScore', dni: null, mes: null };
