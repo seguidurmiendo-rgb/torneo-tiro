@@ -836,6 +836,7 @@
                 });
                 shootersList = await res.json();
                 const select = document.getElementById('selectTirador');
+                select.innerHTML = '<option value="">Seleccione Tirador...</option>';
                 shootersList.forEach(s => {
                     const opt = document.createElement('option');
                     opt.value = s.DNI;
