@@ -1471,9 +1471,16 @@
 
     <!-- UI para Impresión (Invisible en Pantalla) -->
     <div id="printableReport">
-        <div class="print-title">
-            <h1 style="color: #000;">Club SITAS</h1>
-            <h2 style="color: #000;" id="printHeader">Ranking Mensual de Tiro</h2>
+        <div class="print-title"
+            style="display: flex; align-items: center; justify-content: flex-start; gap: 2rem; border-bottom: 3px solid #000; padding-bottom: 1.5rem; margin-bottom: 2rem;">
+            <img src="club-sitas-white.jpeg" alt="SITAS Logo"
+                style="width: 120px; height: 120px; object-fit: cover; border-radius: 50%; border: 2px solid #000;">
+            <div style="text-align: left; border-bottom: none; padding-bottom: 0; margin-bottom: 0;"
+                class="print-title">
+                <h1 style="color: #000; font-size: 2.5rem; margin-bottom: 0.5rem; letter-spacing: 2px;">CLUB SITAS</h1>
+                <h2 style="color: #333; font-size: 1.5rem; margin-top: 0; letter-spacing: 1px;" id="printHeader">Ranking
+                    Torneo Anual 2026</h2>
+            </div>
         </div>
         <table class="print-table">
             <thead>
@@ -1570,8 +1577,11 @@
                     body.appendChild(tr);
                 });
 
-                document.getElementById('printHeader').textContent = `Ranking Torneo Anual - Mes: ${mes}`;
-                document.getElementById('printDate').textContent = new Date().toLocaleDateString();
+                document.getElementById('printHeader').textContent = `Ranking Torneo Anual 2026 - Mes: ${mes}`;
+
+                const now = new Date();
+                const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+                document.getElementById('printDate').textContent = now.toLocaleDateString('es-ES', dateOptions);
 
                 msg.textContent = "✅ Listo para imprimir.";
                 msg.style.color = "var(--primary)";
